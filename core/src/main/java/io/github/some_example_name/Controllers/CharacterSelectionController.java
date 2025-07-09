@@ -39,25 +39,24 @@ public class CharacterSelectionController {
                         currentPlayer.setSpeed(1);
                         break;
                     case "scarlet":
-                        currentPlayer.setPlayerHealth(1);
-                        currentPlayer.setSpeed(7);
+                        currentPlayer.setPlayerHealth(3);
+                        currentPlayer.setSpeed(5);
                         break;
                     case "lilith":
-                        currentPlayer.setPlayerHealth(4);
-                        currentPlayer.setSpeed(4);
+                        currentPlayer.setPlayerHealth(5);
+                        currentPlayer.setSpeed(3);
                         break;
                     case "dasher":
                         currentPlayer.setPlayerHealth(2);
-                        currentPlayer.setSpeed(6);
+                        currentPlayer.setSpeed(10);
                         break;
                     default:
                         currentPlayer.setPlayerHealth(3);
                         currentPlayer.setSpeed(3);
                 }
 
-                // رفتن به صفحه بعد
-                Main.getMain().setScreen(
-                    new PreGameMenuView(new PreGameMenuController(currentPlayer),
+                Main.instance.setScreen(
+                    new PreGameMenuView(new PreGameMenuController(),
                         GameAssetManager.getSkin(), currentPlayer));
             }
         });
@@ -65,7 +64,7 @@ public class CharacterSelectionController {
         view.getBackButton().addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                Main.getMain().setScreen(
+                Main.instance.setScreen(
                     new MainMenuView(new MainMenuController(currentPlayer),
                         GameAssetManager.getSkin(), currentPlayer));
             }

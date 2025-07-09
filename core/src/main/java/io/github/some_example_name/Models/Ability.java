@@ -15,7 +15,6 @@ public class Ability {
     public String getName() { return name; }
     public String getDescription() { return description; }
 
-    // Predefined abilities
     public static final Ability VITALITY = new Ability(AbilityType.VITALITY, "VITALITY", "افزایش ماکسیمم HP به اندازه یک واحد");
     public static final Ability DAMAGER = new Ability(AbilityType.DAMAGER, "DAMAGER", "افزایش ۲۵ درصدی دمیج سلاح به مدت ۱۰ ثانیه");
     public static final Ability PROCREASE = new Ability(AbilityType.PROCREASE, "PROCREASE", "افزایش یک واحدی شلیک Projectile سلاح");

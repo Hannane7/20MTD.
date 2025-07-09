@@ -8,12 +8,8 @@
     }
   },
   "com.badlogic.gdx.graphics.Color": {
-    "background": {
-      "r": 1,
-      "g": 1,
-      "b": 0,
-      "a": 1
-    },
+    "background": { "r": 0.7, "g": 0.25, "b": 0.3, "a": 1 },
+
     "clear": {
       "r": 1,
       "g": 1,
@@ -49,7 +45,11 @@
       "g": 0.2,
       "b": 0,
       "a": 1
-    }
+    },
+
+    "darkRed": { "r": 0.5, "g": 0.05, "b": 0.1, "a": 1 },
+    "lightYellow": { "r": 0.9, "g": 0.9, "b": 0.7, "a": 1 }
+
   },
   "com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable": {
     "clear": {
@@ -230,7 +230,7 @@
     },
     "window-b": {
       "name": "window",
-      "color": "darkGreen"
+      "color": "darkRed"
     },
     "title-bg-c": {
       "name": "title-bg",
@@ -334,7 +334,7 @@
     },
     "title": {
       "font": "title",
-      "fontColor": "color"
+      "fontColor": "white"
     },
     "title-bg": {
       "font": "title",
@@ -345,8 +345,8 @@
   "com.badlogic.gdx.scenes.scene2d.ui.List$ListStyle": {
     "default": {
       "font": "font",
-      "fontColorSelected": "color",
-      "fontColorUnselected": "color",
+      "fontColorSelected": "white",
+      "fontColorUnselected": "white",
       "selection": "over",
       "background": "list-b"
     }
@@ -400,7 +400,7 @@
   "com.badlogic.gdx.scenes.scene2d.ui.TextField$TextFieldStyle": {
     "default": {
       "font": "font",
-      "fontColor": "color",
+      "fontColor": "lightYellow",
       "background": "textfield-c",
       "cursor": "split-pane",
       "selection": "over"
@@ -412,7 +412,7 @@
       "down": "select-box-pressed-b",
       "over": "list-b",
       "font": "font",
-      "fontColor": "color",
+      "fontColor": "white",
       "downFontColor": "down",
       "overFontColor": "over"
     },

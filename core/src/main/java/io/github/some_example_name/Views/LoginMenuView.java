@@ -2,10 +2,12 @@ package io.github.some_example_name.Views;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.some_example_name.Controllers.LoginMenuController;
+import io.github.some_example_name.Main;
 
 public class LoginMenuView implements Screen {
     private final LoginMenuController controller;
@@ -15,11 +17,13 @@ public class LoginMenuView implements Screen {
     private TextField usernameField;
     private TextField passwordField;
     private Label messageLabel;
+    private Texture backgroundTexture;
 
     public LoginMenuView(LoginMenuController controller, Skin skin) {
         this.controller = controller;
         this.skin = skin;
         this.stage = new Stage(new ScreenViewport());
+        this.backgroundTexture = new Texture("Images/Backgrounds/Menus.png");
         Gdx.input.setInputProcessor(stage);
         controller.setView(this);
         initUI();
@@ -45,19 +49,26 @@ public class LoginMenuView implements Screen {
 
         messageLabel = new Label("", skin);
 
-        loginButton.addListener(event -> {
-            controller.handleLogin(usernameField.getText(), passwordField.getText());
-            return false;
+
+        loginButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ClickListener() {
+            @Override
+            public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
+                controller.handleLogin(usernameField.getText(), passwordField.getText());
+            }
         });
 
-        forgotButton.addListener(event -> {
-            controller.handleForgotPassword(usernameField.getText());
-            return false;
+        forgotButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ClickListener() {
+            @Override
+            public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
+                controller.handleForgotPassword(usernameField.getText());
+            }
         });
 
-        backButton.addListener(event -> {
-            controller.handleBack();
-            return false;
+        backButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ClickListener() {
+            @Override
+            public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
+                controller.handleBack();
+            }
         });
 
         table.add(title).colspan(2).padBottom(20).row();
@@ -71,6 +82,7 @@ public class LoginMenuView implements Screen {
         table.add(messageLabel).colspan(2).padTop(10);
     }
 
+
     public void showError(String msg) {
         messageLabel.setText("[ERROR] " + msg);
     }
@@ -80,7 +92,15 @@ public class LoginMenuView implements Screen {
     }
 
     @Override public void show() {}
-    @Override public void render(float delta) {
+    @Override
+    public void render(float delta) {
+        com.badlogic.gdx.utils.ScreenUtils.clear(0, 0, 0, 1);
+        stage.act(delta);
+        Main.getBatch().begin();
+        Main.getBatch().draw(backgroundTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Main.getBatch().end();
+
+
         stage.act(delta);
         stage.draw();
     }
@@ -90,7 +110,11 @@ public class LoginMenuView implements Screen {
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
         stage.dispose();
+        if (backgroundTexture != null) {
+            backgroundTexture.dispose();
+        }
     }
 }

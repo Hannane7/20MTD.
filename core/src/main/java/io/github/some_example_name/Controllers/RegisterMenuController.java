@@ -4,31 +4,31 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
-import io.github.some_example_name.Models.Player;
-import io.github.some_example_name.Views.RegisterMenuView;
-import io.github.some_example_name.Views.LoginMenuView;
-import io.github.some_example_name.Views.SecurityQuestionView;
 import io.github.some_example_name.Main;
 import io.github.some_example_name.Models.GameAssetManager;
+import io.github.some_example_name.Models.Player;
+import io.github.some_example_name.Views.LoginMenuView;
 import io.github.some_example_name.Views.MainMenuView;
+import io.github.some_example_name.Views.RegisterMenuView;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class RegisterMenuController {
     private RegisterMenuView registerView;
-    private LoginMenuView loginView;
     private final FileHandle userFile;
     private final Json json;
 
     private final String[] avatarPaths = {
-        "assets/Images/avatar/avatar1.png",
-        "assets/Images/avatar/avatar2.png",
-        "assets/Images/avatar/avatar3.png",
-        "assets/Images/avatar/avatar4.png"
+        "Images/avatar/avatar1.png",
+        "Images/avatar/avatar2.png",
+        "Images/avatar/avatar3.png",
+        "Images/avatar/avatar4.png"
     };
 
     public RegisterMenuController() {
-        this.userFile = Gdx.files.local("users.json");   //???/
+        this.userFile = Gdx.files.local("users.json");
         this.json = new Json();
         json.setOutputType(JsonWriter.OutputType.json);
     }
@@ -37,77 +37,50 @@ public class RegisterMenuController {
         this.registerView = view;
     }
 
-    public void setLoginView(LoginMenuView view) {
-        this.loginView = view;
-    }
-
     public void handleRegister(String username, String password, String selectedQuestion, String answer) {
         if (username.isEmpty() || password.isEmpty() || selectedQuestion.isEmpty() || answer.isEmpty()) {
-            registerView.showError("All fields are required.");
+            if (registerView != null) registerView.showError("All fields are required.");
             return;
         }
 
         if (!isPasswordStrong(password)) {
-            registerView.showError("Password must be at least 8 characters, include a number, an uppercase letter, and a special character.");
+            if (registerView != null) registerView.showError("Password must be stronger.");
             return;
         }
 
         List<Player> players = loadPlayers();
 
         if (isUsernameDuplicate(players, username)) {
-            registerView.showError("This username already exists.");
+            if (registerView != null) registerView.showError("This username already exists.");
             return;
         }
 
-        String avatarPath = getRandomAvatarPath();
         Player newPlayer = new Player(username, password);
-        newPlayer.setAvatarPath(avatarPath);
+        newPlayer.setAvatarPath(getRandomAvatarPath());
         newPlayer.setSecurityQuestion(selectedQuestion);
         newPlayer.setSecurityAnswer(answer);
+        newPlayer.initializeTransientFields();
 
         players.add(newPlayer);
         savePlayers(players);
 
-        registerView.showSuccess("Registration successful!");
-        Main.getMain().setScreen(new MainMenuView(new MainMenuController(newPlayer), GameAssetManager.getSkin(), newPlayer));
+        if (registerView != null) registerView.showSuccess("Registration successful!");
+
+        Main.instance.setScreen(new MainMenuView(new MainMenuController(newPlayer), GameAssetManager.getSkin(), newPlayer));
     }
 
     public void handleGuestLogin() {
         String guestName = "Guest_" + UUID.randomUUID().toString().substring(0, 6);
         Player guestPlayer = new Player(guestName, "");
         guestPlayer.setAvatarPath("Images/avatar/avatar5.png");
-
-        Main.getMain().setScreen(new MainMenuView(new MainMenuController(guestPlayer), GameAssetManager.getSkin(), guestPlayer));
-    }
-
-    public void resetPassword(Player player, String answer, String newPassword) {
-        if (!player.getSecurityAnswer().equalsIgnoreCase(answer)) {
-            registerView.showError("Incorrect security answer.");
-            return;
-        }
-
-        if (!isPasswordStrong(newPassword)) {
-            registerView.showError("New password is too weak.");
-            return;
-        }
-
-        List<Player> players = loadPlayers();
-        for (Player p : players) {
-            if (p.getUsername().equalsIgnoreCase(player.getUsername())) {
-                p.setPassword(newPassword);
-                break;
-            }
-        }
-
-        savePlayers(players);
-        Main.getMain().setScreen(new MainMenuView(new MainMenuController(player), GameAssetManager.getSkin(), player));
+        guestPlayer.initializeTransientFields();
+        Main.instance.setScreen(new MainMenuView(new MainMenuController(guestPlayer), GameAssetManager.getSkin(), guestPlayer));
     }
 
     public void handleBack() {
-        Main.getMain().setScreen(new MainMenuView(new MainMenuController(null), GameAssetManager.getSkin(), null));
+        Gdx.app.exit();
     }
 
-    /** Password must be at least 8 chars, have uppercase, number, special char */
     private boolean isPasswordStrong(String password) {
         return password.length() >= 8 &&
             password.matches(".*[A-Z].*") &&
@@ -115,7 +88,6 @@ public class RegisterMenuController {
             password.matches(".*[!@#$%^&*()_+\\-={}\\[\\]:;\"'<>,.?/\\\\|].*");
     }
 
-    /** Checks for username duplication (case-insensitive) */
     private boolean isUsernameDuplicate(List<Player> players, String username) {
         for (Player player : players) {
             if (player.getUsername().equalsIgnoreCase(username)) {
@@ -125,17 +97,30 @@ public class RegisterMenuController {
         return false;
     }
 
+
     private List<Player> loadPlayers() {
-        if (!userFile.exists()) return new ArrayList<>();
+        if (!userFile.exists() || userFile.length() == 0) {
+            return new ArrayList<>();
+        }
         try {
             return json.fromJson(ArrayList.class, Player.class, userFile);
         } catch (Exception e) {
+            System.err.println("Could not parse users.json, returning new list.");
+            e.printStackTrace();
             return new ArrayList<>();
         }
     }
 
+
     private void savePlayers(List<Player> players) {
-        json.toJson(players, userFile);
+        json.setUsePrototypes(false);
+        try {
+            userFile.writeString(json.prettyPrint(players), false);
+            System.out.println("Players saved successfully! Total users: " + players.size());
+        } catch (Exception e) {
+            System.err.println("!!! FAILED TO SAVE PLAYERS !!!");
+            e.printStackTrace();
+        }
     }
 
     private String getRandomAvatarPath() {

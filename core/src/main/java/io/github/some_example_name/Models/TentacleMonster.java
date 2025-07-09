@@ -8,7 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 
 public class TentacleMonster extends Enemy {
-    private float speed = 1.2f;
+    private float speed = 70f;
 
     private Animation<TextureRegion> idleAnimation;
     private Animation<TextureRegion> spawnAnimation;
@@ -20,7 +20,8 @@ public class TentacleMonster extends Enemy {
 
     public TentacleMonster(Vector2 spawnPosition) {
         super("TentacleMonster", 25, getIdleFrameTexture(), spawnPosition);
-
+        this.damage = 1f;
+        this.xpDrop = 10;
         TextureRegion[] idleFrames = new TextureRegion[4];
         idleFrames[0] = new TextureRegion(getIdleFrameTexture());
         idleFrames[1] = new TextureRegion(new Texture(Gdx.files.internal("Images/Sprite/Monsters/T_TentacleEnemy_1.png")));
@@ -64,7 +65,7 @@ public class TentacleMonster extends Enemy {
                 return;
             }
             if (!attacking) {
-                moveToPlayer(player, speed);
+                moveToPlayer(player, speed * delta);
                 stateTime += delta;
             }
         }

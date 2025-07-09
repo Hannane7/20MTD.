@@ -1,58 +1,32 @@
 package io.github.some_example_name.Controllers;
 
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import io.github.some_example_name.Main;
 import io.github.some_example_name.Models.GameAssetManager;
 import io.github.some_example_name.Models.Player;
 import io.github.some_example_name.Models.PreGame;
 import io.github.some_example_name.Views.GameView;
 import io.github.some_example_name.Views.MainMenuView;
-import io.github.some_example_name.Views.PreGameMenuView;
 
 public class PreGameMenuController {
-    private PreGameMenuView view;
-    private final Player currentPlayer;
 
-    public PreGameMenuController(Player currentPlayer) {
-        this.currentPlayer = currentPlayer;
+    public void handleStartGame(Player player, String selectedHero, String selectedWeapon, float duration) {
+
+        Main.gameState = Main.GameState.PLAYING;
+
+        player.setSelectedCharacter(selectedHero);
+
+        PreGame preGameInfo = new PreGame(player.getUsername(), selectedHero, selectedWeapon, duration);
+
+        Main.instance.setScreen(new GameView(player, preGameInfo));
     }
 
-    public void setView(PreGameMenuView view) {
-        this.view = view;
-
-        // نمایش اطلاعات پلیر
-        if (view != null && currentPlayer != null) {
-            view.updatePlayerInfo(currentPlayer);
-        }
-
-        // دکمه Start بازی
-        if (view != null) {
-            view.getPlayButton().addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    String selectedHero = view.getSelectedHero();
-                    String selectedWeapon = view.getSelectedWeapon();
-                    float selectedDuration = view.getSelectedDuration();
-
-                    PreGame preGame = new PreGame(currentPlayer.getUsername(), selectedHero, selectedWeapon, selectedDuration);
-
-                    Main.getMain().setScreen(new GameView(currentPlayer, preGame));
-                }
-            });
-
-            view.getBackButton().addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    Main.getMain().setScreen(
-                        new MainMenuView(
-                            new MainMenuController(currentPlayer),
-                            GameAssetManager.getSkin(),
-                            currentPlayer
-                        )
-                    );
-                }
-            });
-        }
+    public void handleBack(Player player) {
+        Main.instance.setScreen(
+            new MainMenuView(
+                new MainMenuController(player),
+                GameAssetManager.getSkin(),
+                player
+            )
+        );
     }
 }

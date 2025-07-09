@@ -1,6 +1,9 @@
 package io.github.some_example_name.Controllers;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import io.github.some_example_name.Main;
 import io.github.some_example_name.Models.Bullet;
@@ -10,6 +13,8 @@ import io.github.some_example_name.Models.Weapon;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+//import static io.github.some_example_name.Main.batch;
 
 public class WeaponController {
     private final Weapon weapon;
@@ -22,9 +27,9 @@ public class WeaponController {
         this.bullets = new ArrayList<>();
     }
 
-    public void update(float delta) {
+    public void update(float delta, Vector2 aimTarget) {
         weapon.update();
-
+        updateWeaponAngle(aimTarget);
 
         Iterator<Bullet> it = bullets.iterator();
         while (it.hasNext()) {
@@ -36,46 +41,77 @@ public class WeaponController {
         }
     }
 
-    public void render(float centerX, float centerY, float offsetX, float offsetY) {
+    public void render(Batch batch, float offsetX, float offsetY) {
         for (Bullet b : bullets) {
-            b.render(Main.getBatch(), b.getPosition().x + offsetX, b.getPosition().y + offsetY);
+            b.draw(batch, offsetX, offsetY);
+        }
+
+        Sprite weaponSprite = weapon.getWeaponSprite();
+        if (weaponSprite == null) return;
+
+        float playerScreenX = Gdx.graphics.getWidth() / 2f;
+        float playerScreenY = Gdx.graphics.getHeight() / 2f;
+
+        if (weapon.isReloading()) {
+            TextureRegion reloadFrame = weapon.getReloadKeyFrame();
+            if (reloadFrame != null && player.getPlayerSprite() != null) {
+                batch.draw(reloadFrame,
+                    playerScreenX - reloadFrame.getRegionWidth() / 2,
+                    playerScreenY + player.getPlayerSprite().getHeight() / 2);
+            }
+        } else {
+            float weaponX = playerScreenX;
+            float weaponY = playerScreenY - weaponSprite.getHeight() / 2f;
+            weaponSprite.setPosition(weaponX, weaponY);
+            weaponSprite.setRotation(weapon.getAngle());
+            weaponSprite.draw(batch);
         }
     }
 
-
-    public void shoot(float mouseX, float mouseY) {
+    public void shoot(float targetX, float targetY) {
         if (!weapon.canShoot()) return;
 
-        float playerX = player.getPosX() + 32;
-        float playerY = player.getPosY() + 32;
-        Vector2 target = new Vector2(mouseX, mouseY);
+        float playerCenterX = player.getPosX() + player.getPlayerSprite().getWidth() / 2;
+        float playerCenterY = player.getPosY() + player.getPlayerSprite().getHeight() / 2;
+        Vector2 weaponOffset = new Vector2(weapon.getWeaponSprite().getWidth() * 0.8f, -10).rotateDeg(weapon.getAngle());
+        float startX = playerCenterX + weaponOffset.x;
+        float startY = playerCenterY + weaponOffset.y;
+
+        Vector2 target = new Vector2(targetX, targetY);
+        float currentDamage = weapon.getDamage();
+        if (player.isDamagerActive()) {
+            currentDamage *= 1.25f;
+        }
 
         String name = weapon.getName().toLowerCase();
-
         if (name.contains("shotgun")) {
-            shootShotgun(playerX, playerY, target);
+            shootShotgun(startX ,startY, target, currentDamage);
         } else if (name.contains("smg")) {
-            shootSMG(playerX, playerY, target);
+            shootSMG(startX, startY, target, currentDamage);
         } else {
-            shootSingleBullet(playerX, playerY, target);
+            shootSingleBullet(startX, startY, target, currentDamage);
+        }
+
+        for (int i = 0; i < player.getProjectileBonus(); i++) {
+            shootSingleBullet(startX, startY, target, weapon.getDamage() * 0.2f);
         }
 
         weapon.shoot();
     }
 
-    private void shootSingleBullet(float x, float y, Vector2 target) {
-        bullets.add(new Bullet(x, y, target.x, target.y, 800, weapon.getDamage(), Bullet.BulletOwner.PLAYER));
+    private void shootSingleBullet(float x, float y, Vector2 target, float damage) {
+        bullets.add(new Bullet(x, y, target.x, target.y, 800, damage, Bullet.BulletOwner.PLAYER));
     }
 
-    private void shootShotgun(float x, float y, Vector2 target) {
-        int pelletCount = 5;
+    private void shootShotgun(float x, float y, Vector2 target, float damage) {
+        int pelletCount = 4;
         float spreadAngle = 15f;
 
         Vector2 direction = target.cpy().sub(x, y).nor();
         float baseAngle = direction.angleDeg();
 
         for (int i = 0; i < pelletCount; i++) {
-            float angleOffset = (i - pelletCount / 2f) * spreadAngle;
+            float angleOffset = (i - (pelletCount - 1) / 2f) * spreadAngle;
             float finalAngle = baseAngle + angleOffset;
 
             Vector2 rotated = new Vector2(1, 0).setAngleDeg(finalAngle);
@@ -85,7 +121,7 @@ public class WeaponController {
         }
     }
 
-    private void shootSMG(float x, float y, Vector2 target) {
+    private void shootSMG(float x, float y, Vector2 target, float damage) {
         for (int i = 0; i < 2; i++) {
             Vector2 spread = target.cpy().sub(x, y).nor();
             spread.rotateDeg((float) (Math.random() * 10 - 5));
@@ -110,7 +146,18 @@ public class WeaponController {
         weapon.reload();
     }
 
+    private void updateWeaponAngle(Vector2 aimTarget) {
+        if (player == null || weapon.getWeaponSprite() == null) return;
 
+        float playerCenterX = player.getPosX() + player.getPlayerSprite().getWidth() / 2;
+        float playerCenterY = player.getPosY() + player.getPlayerSprite().getHeight() / 2;
+
+        float dx = aimTarget.x - playerCenterX;
+        float dy = aimTarget.y - playerCenterY;
+
+        float angle = com.badlogic.gdx.math.MathUtils.atan2(dy, dx) * com.badlogic.gdx.math.MathUtils.radiansToDegrees;
+        weapon.setAngle(angle);
+    }
 
 
 

@@ -3,12 +3,16 @@ package io.github.some_example_name.Views;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.some_example_name.Controllers.MainMenuController;
 import io.github.some_example_name.Main;
+import io.github.some_example_name.Models.GameAssetManager;
 import io.github.some_example_name.Models.Player;
 
 public class MainMenuView implements Screen {
@@ -18,126 +22,102 @@ public class MainMenuView implements Screen {
     private final Player currentPlayer;
 
     private Label messageLabel;
+    private Texture backgroundTexture;
 
-    public  MainMenuView(MainMenuController controller, Skin skin, Player currentPlayer) {
+
+    public MainMenuView(MainMenuController controller, Skin skin, Player currentPlayer) {
         this.controller = controller;
         this.skin = skin;
         this.currentPlayer = currentPlayer;
         this.stage = new Stage(new ScreenViewport());
+        this.backgroundTexture = GameAssetManager.getManager().get("Images/Backgrounds/Menus.png");
         Gdx.input.setInputProcessor(stage);
 
         buildUI();
     }
 
-    private void buildUI() {
-        Table table = new Table();
-        table.setFillParent(true);
-        table.center();
-        stage.addActor(table);
 
-        // Title
+    private void buildUI() {
+        Table mainTable = new Table();
+        mainTable.setFillParent(true);
+        mainTable.center();
+        stage.addActor(mainTable);
+
         Label titleLabel = new Label("20 Minutes Till Dawn", skin, "title");
-        table.add(titleLabel).colspan(2).padBottom(40);
-        table.row();
+        mainTable.add(titleLabel).colspan(2).padBottom(20).row();
 
         if (currentPlayer != null && currentPlayer.getAvatarPath() != null) {
-            Image avatar = new Image(new com.badlogic.gdx.graphics.Texture(Gdx.files.internal(currentPlayer.getAvatarPath())));
-            avatar.setSize(64, 64);
-            table.add(avatar).colspan(2).padBottom(5);
-            table.row();
+            try {
+                Image avatar = new Image(new com.badlogic.gdx.graphics.Texture(Gdx.files.internal(currentPlayer.getAvatarPath())));
+                mainTable.add(avatar).size(64, 64).padBottom(5).row();
+            } catch (Exception e) {
+                Gdx.app.error("MainMenuView", "Avatar not found: " + currentPlayer.getAvatarPath());
+            }
         }
 
         String displayName = currentPlayer != null ? currentPlayer.getUsername() : "Guest";
         Label playerLabel = new Label("Player: " + displayName, skin);
-        table.add(playerLabel).colspan(2).padBottom(10);
-        table.row();
+        mainTable.add(playerLabel).padBottom(10).row();
 
         if (currentPlayer != null) {
             Label scoreLabel = new Label("Score: " + currentPlayer.getScore(), skin);
-            table.add(scoreLabel).colspan(2).padBottom(10);
-            table.row();
+            mainTable.add(scoreLabel).padBottom(20).row();
         }
 
+        // --- بخش اسکرول‌شو برای دکمه‌ها ---
+        Table buttonTable = new Table();
+        ScrollPane scrollPane = new ScrollPane(buttonTable, skin);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+
         TextButton continueBtn = new TextButton("Continue", skin);
-        continueBtn.addListener(e -> {
-            controller.handleLoadGame(currentPlayer);
-            return true;
-        });
-        table.add(continueBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton newGameBtn = new TextButton("New Game", skin);
-        newGameBtn.addListener(e -> {
-            controller.handleNewGame(currentPlayer);
-            return true;
-        });
-        table.add(newGameBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton loadGameBtn = new TextButton("Load Game", skin);
-        loadGameBtn.addListener(e -> {
-            controller.handleLoadGame(currentPlayer);
-            return true;
-        });
-        table.add(loadGameBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton settingsBtn = new TextButton("Settings", skin);
-        settingsBtn.addListener(e -> {
-            controller.handleSettings();
-            return true;
-        });
-        table.add(settingsBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton profileButton = new TextButton("Profile", skin);
-        profileButton.addListener(e -> {
-            if (currentPlayer != null && !currentPlayer.getUsername().startsWith("Guest")) {
-                controller.handleProfile(currentPlayer);
-            } else {
-                messageLabel.setText("[ERROR] Profile is only available for registered players.");
-                messageLabel.setColor(com.badlogic.gdx.graphics.Color.RED);
-            }
-            return false;
-        });
-        table.add(profileButton).width(200).padBottom(10);
-        table.row();
-
         TextButton scoreboardBtn = new TextButton("Scoreboard", skin);
-        scoreboardBtn.addListener(e -> {
-            controller.handleScoreboard(currentPlayer);
-            return true;
-        });
-        table.add(scoreboardBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton talentBtn = new TextButton("Talent/Hints", skin);
-        talentBtn.addListener(e -> {
-            controller.handleTalent(currentPlayer);
-            return true;
-        });
-        table.add(talentBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton creditsBtn = new TextButton("Credits", skin);
-        creditsBtn.addListener(e -> {
-            controller.handleCredits();
-            return true;
-        });
-        table.add(creditsBtn).width(200).padBottom(10);
-        table.row();
-
         TextButton exitBtn = new TextButton("Exit", skin);
-        exitBtn.addListener(e -> {
-            controller.handleExit();
-            return true;
-        });
-        table.add(exitBtn).width(200).padBottom(10);
-        table.row();
+
+        float buttonWidth = 250;
+        float buttonPad = 10;
+        buttonTable.add(continueBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(newGameBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(loadGameBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(settingsBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(profileButton).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(scoreboardBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(talentBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(creditsBtn).width(buttonWidth).padBottom(buttonPad).row();
+        buttonTable.add(exitBtn).width(buttonWidth).padBottom(buttonPad).row();
+
+        mainTable.add(scrollPane).height(Gdx.graphics.getHeight() * 0.4f).fillX().padBottom(10).row();
 
         messageLabel = new Label("", skin);
         messageLabel.setAlignment(Align.center);
-        table.add(messageLabel).colspan(2).padTop(15).width(300);
+        mainTable.add(messageLabel).width(300).padTop(15);
+
+
+        continueBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleLoadGame(); }});
+        loadGameBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleLoadGame(); }});
+        newGameBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleNewGame(); }});
+        settingsBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleSettings(); }});
+
+        profileButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) {
+            if (currentPlayer != null && !currentPlayer.getUsername().startsWith("Guest")) {
+                controller.handleProfile(currentPlayer);
+            } else {
+                messageLabel.setText("[ERROR] Profile is only for registered players.");
+                messageLabel.setColor(com.badlogic.gdx.graphics.Color.RED);
+            }
+        }});
+
+        scoreboardBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleScoreboard(currentPlayer); }});
+        talentBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleTalent(currentPlayer); }});
+        creditsBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleCredits(); }});
+
+        exitBtn.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { controller.handleExit(); }});
     }
 
     @Override
@@ -145,9 +125,12 @@ public class MainMenuView implements Screen {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        com.badlogic.gdx.utils.ScreenUtils.clear(0, 0, 0, 1);
         stage.act(delta);
+        Main.getBatch().begin();
+        Main.getBatch().draw(backgroundTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Main.getBatch().end();
+
         stage.draw();
     }
 

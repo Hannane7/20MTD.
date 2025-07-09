@@ -7,115 +7,79 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 
 public class Elder extends Enemy {
+    private float speed = 60f;
+    private float dashSpeed = 480f;
     private float dashCooldown = 0;
-    private final float DASH_INTERVAL = 5f;
-    private boolean shieldActive = true;
-    private float shieldRadius = 150f;
-    private float speed = 0.8f;
-
+    private final float DASH_INTERVAL = 2f;
     private Vector2 dashTarget = null;
     private boolean isDashing = false;
-    private float dashSpeed = 8f;
 
     private TextureRegion normalFrame;
     private TextureRegion deadFrame;
     private boolean dead = false;
 
     public Elder(Vector2 spawnPosition) {
-        super("Elder", 400, getNormalTexture(), spawnPosition);
+        super("Elder", 400, GameAssetManager.getManager().get("Images/Sprite/Monsters/ElderBrain.png", Texture.class), spawnPosition);
+        this.damage = 2f;
+        this.xpDrop = 100;
 
-        normalFrame = new TextureRegion(getNormalTexture());
-        deadFrame = new TextureRegion(getDeadTexture());
+        Texture normalTexture = GameAssetManager.getManager().get("Images/Sprite/Monsters/ElderBrain.png", Texture.class);
+        Texture deadTexture = GameAssetManager.getManager().get("Images/Sprite/Monsters/ElderBrain_Em.png", Texture.class);
+
+        normalFrame = new TextureRegion(normalTexture);
+        deadFrame = new TextureRegion(deadTexture);
 
         this.sprite.setSize(normalFrame.getRegionWidth(), normalFrame.getRegionHeight());
-        this.sprite.setTexture(normalFrame.getTexture());
-
-        this.xpDrop = 35;
     }
 
-    private static Texture normalTexture = null, deadTexture = null;
-    private static Texture getNormalTexture() {
-        if (normalTexture == null)
-            normalTexture = new Texture(Gdx.files.internal("Images/Sprite/Monsters/ElderBrain.png"));
-        return normalTexture;
-    }
-    private static Texture getDeadTexture() {
-        if (deadTexture == null)
-            deadTexture = new Texture(Gdx.files.internal("Images/Sprite/Monsters/ElderBrain_Em.png"));
-        return deadTexture;
-    }
 
     @Override
     public void update(float delta, Player player) {
+        if (dead) return;
         rect.move(sprite.getX(), sprite.getY());
-        if (!dead) {
-            dashCooldown -= delta;
 
-            if (shieldActive) {
-                if (dashCooldown <= 0) {
-                    startDash(player);
-                    dashCooldown = DASH_INTERVAL;
-                    reduceShield();
-                }
-                if (isDashing && dashTarget != null) {
-                    dashTowardsTarget(delta);
-                }
-            } else {
-                moveToPlayer(player, speed);
-            }
+        dashCooldown -= delta;
+        if (dashCooldown <= 0) {
+            startDash(player);
+            dashCooldown = DASH_INTERVAL;
+        }
+
+        if (isDashing) {
+            dashTowardsTarget(delta);
+        } else {
+            moveToPlayer(player, speed * delta);
         }
     }
 
     private void startDash(Player player) {
-        dashTarget = new Vector2(player.getPositionCenter());
+        if (player == null || player.getPositionCenter() == null) return;
         isDashing = true;
-        System.out.println("Elder dashes toward the player.");
+        dashTarget = new Vector2(player.getPositionCenter());
     }
 
     private void dashTowardsTarget(float delta) {
-        Vector2 currentPos = getPositionCenter();
-        Vector2 direction = dashTarget.cpy().sub(currentPos).nor();
-        float moveX = direction.x * dashSpeed;
-        float moveY = direction.y * dashSpeed;
-        sprite.setPosition(sprite.getX() + moveX * delta, sprite.getY() + moveY * delta);
-
-        if (currentPos.dst(dashTarget) < 10f) {
+        if (dashTarget == null || getPositionCenter().dst(dashTarget) < 15f) {
             isDashing = false;
             dashTarget = null;
+            return;
         }
+        Vector2 direction = dashTarget.cpy().sub(getPositionCenter()).nor();
+        sprite.translate(direction.x * dashSpeed * delta, direction.y * dashSpeed * delta);
     }
 
-    private void reduceShield() {
-        shieldRadius -= 10f;
-        if (shieldRadius <= 0) {
-            shieldActive = false;
-            System.out.println("Elder shield is down.");
-        }
-    }
-
-    public boolean isShieldActive() {
-        return shieldActive;
-    }
-
-    public float getShieldRadius() {
-        return shieldRadius;
-    }
-
+    @Override
     public void die() {
-        dead = true;
+        this.dead = true;
     }
 
     @Override
     public void draw(Batch batch, float offsetX, float offsetY) {
-        float drawX = getX() + offsetX;
-        float drawY = getY() + offsetY;
-
+        float drawX = sprite.getX() + offsetX;
+        float drawY = sprite.getY() + offsetY;
         if (dead) {
-            batch.draw(deadFrame, drawX, drawY);
+            batch.draw(deadFrame, drawX, drawY, deadFrame.getRegionWidth(), deadFrame.getRegionHeight());
         } else {
-            batch.draw(normalFrame, drawX, drawY);
+            batch.draw(normalFrame, drawX, drawY, normalFrame.getRegionWidth(), normalFrame.getRegionHeight());
         }
-        // اگه شیلد یا افکت خاص داری اینجا بکش
     }
-
 }

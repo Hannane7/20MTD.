@@ -77,7 +77,14 @@ public class CharacterSelectionView implements Screen {
     }
 
     @Override public void show() {}
-    @Override public void render(float delta) { stage.act(delta); stage.draw(); }
+    @Override
+    public void render(float delta) {
+
+        com.badlogic.gdx.utils.ScreenUtils.clear(0, 0, 0, 1);
+
+        stage.act(delta);
+        stage.draw();
+    }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
     @Override public void pause() {}
     @Override public void resume() {}

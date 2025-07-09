@@ -2,13 +2,22 @@ package io.github.some_example_name.Views;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import io.github.some_example_name.Controllers.MainMenuController;
 import io.github.some_example_name.Controllers.PreGameMenuController;
+import io.github.some_example_name.Main;
+import io.github.some_example_name.Models.GameAssetManager;
 import io.github.some_example_name.Models.Player;
+import io.github.some_example_name.Models.Weapon;
+import io.github.some_example_name.Controllers.GameController; // برای دسترسی به لیست سلاح‌ها
 
 public class PreGameMenuView implements Screen {
 
@@ -16,15 +25,14 @@ public class PreGameMenuView implements Screen {
     private final PreGameMenuController controller;
     private final Skin skin;
     private final Player player;
+    private Texture backgroundTexture;
 
+    private final Label heroHpLabel;
+    private final Label heroSpeedLabel;
+    private final Label weaponDamageLabel;
+    private final Label weaponAmmoLabel;
     private final SelectBox<String> heroSelectBox;
-    private final SelectBox<String> weaponSelectBox;
-    private final SelectBox<String> durationSelectBox;
-    private final TextButton playButton;
-    private final TextButton backButton;
-
-    private final Label usernameLabel;
-    private final Image avatarImage;
+    private final SelectBox<Weapon> weaponSelectBox;
 
     public PreGameMenuView(PreGameMenuController controller, Skin skin, Player player) {
         this.controller = controller;
@@ -33,90 +41,136 @@ public class PreGameMenuView implements Screen {
         this.stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
 
+        this.backgroundTexture = new Texture("Images/Backgrounds/Menus.png");
+
         Table table = new Table();
         table.setFillParent(true);
         table.center();
         stage.addActor(table);
 
-        Label title = new Label("Pre-Game Setup", skin, "title");
+        table.add(new Label("Pre-Game Setup", skin, "title")).colspan(4).padBottom(20).row();
 
-        usernameLabel = new Label("Username: " + player.getUsername(), skin);
-        avatarImage = new Image();
-
+        Image avatarImage = new Image();
         if (player.getAvatarPath() != null && !player.getAvatarPath().isEmpty()) {
-            Texture avatarTexture = new Texture(Gdx.files.internal(player.getAvatarPath()));
-            avatarImage.setDrawable(new Image(avatarTexture).getDrawable());
-            avatarImage.setSize(64, 64);
+            try {
+                Texture avatarTexture = GameAssetManager.getManager().get(player.getAvatarPath(), Texture.class);
+                avatarImage.setDrawable(new TextureRegionDrawable(avatarTexture));
+            } catch (Exception e) { Gdx.app.error("PreGameView", "Avatar not found for path: " + player.getAvatarPath()); }
         }
+
+        table.add(avatarImage).size(64, 64).colspan(4).row();
+        table.add(new Label("Player: " + player.getUsername(), skin)).colspan(4).padBottom(20).row();
 
         heroSelectBox = new SelectBox<>(skin);
-        heroSelectBox.setItems("SHANA", "DIAMOND", "SCARLET", "LILITH", "DASHER");
+        heroSelectBox.setItems("shana", "diamond", "scarlet", "lilith", "dasher");
+        heroSelectBox.setSelected(player.getSelectedCharacter());
+        heroHpLabel = new Label("HP: -", skin);
+        heroSpeedLabel = new Label("Speed: -", skin);
+
+        table.add(new Label("Select Hero:", skin)).left().padRight(10);
+        table.add(heroSelectBox).width(150).left();
+        table.add(heroHpLabel).padLeft(10);
+        table.add(heroSpeedLabel).padLeft(10).row();
 
         weaponSelectBox = new SelectBox<>(skin);
-        weaponSelectBox.setItems("Revolver", "Shotgun", "Dual SMGs");
+        weaponSelectBox.setItems(GameController.getAllWeapons().toArray(new Weapon[0])); // گرفتن لیست سلاح‌ها از کنترلر
+        weaponDamageLabel = new Label("Damage: -", skin);
+        weaponAmmoLabel = new Label("Ammo: -", skin);
 
-        durationSelectBox = new SelectBox<>(skin);
+        table.add(new Label("Select Weapon:", skin)).left().padTop(10).padRight(10);
+        table.add(weaponSelectBox).width(150).left().padTop(10);
+        table.add(weaponDamageLabel).padLeft(10).padTop(10);
+        table.add(weaponAmmoLabel).padLeft(10).padTop(10).row();
+
+        SelectBox<String> durationSelectBox = new SelectBox<>(skin);
         durationSelectBox.setItems("2.5", "5", "10", "20");
+        table.add(new Label("Duration (min):", skin)).left().padTop(10).padRight(10);
+        table.add(durationSelectBox).width(150).left().padTop(10).colspan(3).row();
 
-        playButton = new TextButton("Start Game", skin);
-        backButton = new TextButton("Back", skin);
+        TextButton playButton = new TextButton("Start Game", skin);
+        TextButton backButton = new TextButton("Back", skin);
+        Table buttonRow = new Table();
+        buttonRow.add(playButton).pad(20);
+        buttonRow.add(backButton).pad(20);
+        table.add(buttonRow).colspan(4).padTop(30);
 
-        table.add(title).colspan(2).padBottom(20).row();
-        table.add(usernameLabel).colspan(2).padBottom(10).row();
-        table.add(avatarImage).colspan(2).padBottom(20).row();
-        table.add(new Label("Select Hero:", skin)).left().padRight(10);
-        table.add(heroSelectBox).left().row();
-        table.add(new Label("Select Weapon:", skin)).left().padRight(10);
-        table.add(weaponSelectBox).left().row();
-        table.add(new Label("Duration (minutes):", skin)).left().padRight(10);
-        table.add(durationSelectBox).left().row();
-        table.add(playButton).padTop(20).padRight(20);
-        table.add(backButton).padTop(20).left();
 
-        controller.setView(this);
+        heroSelectBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                updateHeroDetails();
+            }
+        });
+
+        weaponSelectBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                updateWeaponDetails();
+            }
+        });
+
+        playButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                controller.handleStartGame(
+                    player,
+                    heroSelectBox.getSelected(),
+                    weaponSelectBox.getSelected().getName(), // ارسال نام سلاح
+                    Float.parseFloat(durationSelectBox.getSelected())
+                );
+            }
+        });
+
+        backButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                controller.handleBack(player);
+            }
+        });
+
+        updateHeroDetails();
+        updateWeaponDetails();
     }
 
-    public void updatePlayerInfo(Player player) {
-        usernameLabel.setText("Username: " + player.getUsername());
-    }
-
-    public String getSelectedHero() {
-        return heroSelectBox.getSelected();
-    }
-
-    public String getSelectedWeapon() {
-        return weaponSelectBox.getSelected();
-    }
-
-    public float getSelectedDuration() {
-            return Float.parseFloat(durationSelectBox.getSelected());
+    private void updateHeroDetails() {
+        String selectedHero = heroSelectBox.getSelected().toLowerCase();
+        int hp = 0, speed = 0;
+        switch (selectedHero) {
+            case "shana":   hp = 4; speed = 4; break;
+            case "diamond": hp = 7; speed = 1; break;
+            case "scarlet": hp = 3; speed = 5; break;
+            case "lilith":  hp = 5; speed = 3; break;
+            case "dasher":  hp = 2; speed = 10; break;
         }
-
-
-    public TextButton getPlayButton() {
-        return playButton;
+        heroHpLabel.setText("HP: " + hp);
+        heroSpeedLabel.setText("Speed: " + speed);
     }
 
-    public TextButton getBackButton() {
-        return backButton;
+    private void updateWeaponDetails() {
+        Weapon selectedWeapon = weaponSelectBox.getSelected();
+        weaponDamageLabel.setText("Damage: " + (int)selectedWeapon.getDamage());
+        weaponAmmoLabel.setText("Ammo: " + selectedWeapon.getMagazineSize());
     }
 
-    @Override public void show() {}
-    @Override public void render(float delta) {
-        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    @Override
+    public void render(float delta) {
+        com.badlogic.gdx.utils.ScreenUtils.clear(0, 0, 0, 1);
         stage.act(delta);
+        Main.getBatch().begin();
+        Main.getBatch().draw(backgroundTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Main.getBatch().end();
         stage.draw();
     }
 
-    @Override public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
+    @Override
+    public void dispose() {
+        stage.dispose();
+        if (backgroundTexture != null) backgroundTexture.dispose();
     }
 
+    @Override public void show() {}
+    @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
-    @Override public void dispose() {
-        stage.dispose();
-    }
 }

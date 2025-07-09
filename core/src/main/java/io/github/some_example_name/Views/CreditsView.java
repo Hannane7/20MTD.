@@ -38,7 +38,7 @@ public class CreditsView implements Screen {
 
         TextButton backButton = new TextButton("Back", skin);
         backButton.addListener(event -> {
-            Main.getMain().setScreen(new MainMenuView(new MainMenuController(currentPlayer), skin, null));
+            Main.instance.setScreen(new MainMenuView(new MainMenuController(currentPlayer), skin, null));
             return true;
         });
 
@@ -50,7 +50,11 @@ public class CreditsView implements Screen {
     }
 
     @Override public void show() {}
-    @Override public void render(float delta) {
+    @Override
+    public void render(float delta) {
+
+        com.badlogic.gdx.utils.ScreenUtils.clear(0, 0, 0, 1);
+
         stage.act(delta);
         stage.draw();
     }

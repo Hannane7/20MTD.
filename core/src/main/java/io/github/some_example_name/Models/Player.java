@@ -8,8 +8,6 @@ import com.badlogic.gdx.math.Vector2;
 import io.github.some_example_name.Main;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class Player {
     private String username;
@@ -17,46 +15,39 @@ public class Player {
     private String avatarPath;
     private String securityQuestion;
     private String securityAnswer;
-
+    private String selectedCharacter;
+    private List<Ability> unlockedAbilities = new ArrayList<>();
     private int score;
     private int kills = 0;
     private float surviveTime = 0;
-
-    private Texture playerTexture;
-    private Sprite playerSprite;
-    private CollisionRect rect;
-
-    private float posX = 0;
-    private float posY = 0;
-    private int playerHealth = 100;
-    private float time = 0;
-    private float speed = 4;
-
-    private boolean isPlayerIdle = true;
-    private boolean isPlayerRunning = false;
-    private boolean moveUp = false, moveDown = false, moveLeft = false, moveRight = false;
     private int level = 1;
     private int xp = 0;
     private int xpToNextLevel = 20;
-    private String selectedCharacter;
-    protected Sprite sprite;
-    private List<Ability> unlockedAbilities = new ArrayList<>();
-    private Ability currentAbility;
-    private CharacterAnimator animator;
-    private CharacterAnimator.State animState = CharacterAnimator.State.IDLE;
-    private float invincibleTimer = 0f;
-    private Weapon weapon;
-    private Texture weaponTexture;
-    private float weaponAngle;
 
-    // Abilities active timers
-    private float damagerTimer = 0;
-    private float speedyTimer = 0;
-    private float originalSpeed = 4;
-    private float damageMultiplier = 1f;
+    private transient Sprite playerSprite;
+    private transient CollisionRect rect;
+    private transient float posX = 0;
+    private transient float posY = 0;
+    private transient int playerHealth;
+    private transient float speed = 4;
+    private transient boolean moveUp = false, moveDown = false, moveLeft = false, moveRight = false;
+    private transient CharacterAnimator animator;
+    private transient CharacterAnimator.State animState = CharacterAnimator.State.IDLE;
+    private transient float invincibleTimer = 0f;
+    private transient float originalSpeed;
+    private transient Ability currentAbility;
+    private transient float damageMultiplier = 1f;
+    private transient Weapon weapon;
+    private transient float damagerTimer = 0f;
+    private transient float speedyTimer = 0f;
+    private transient int projectileBonus = 0;
 
     public Player() {
-        this("guest", "", "SHANA");
+        // این کانستراктор خالی برای خواندن از JSON ضروری است
+    }
+
+    public Player(String username, String password) {
+        this(username, password, "Shana");
     }
 
     public Player(String username, String password, String charName) {
@@ -66,17 +57,24 @@ public class Player {
         this.posY = Gdx.graphics.getHeight() / 2f;
         this.username = username;
         this.password = password;
-        this.avatarPath = "avatars/default.png";
-        this.playerTexture = GameAssetManager.getCharacterTexture();
-        this.playerSprite = new Sprite(playerTexture);
+        this.avatarPath = "avatar/avatar5.png";
+        this.playerHealth = 4;
+        this.speed = 4;
+        this.originalSpeed = this.speed;
+        this.playerSprite = new Sprite(GameAssetManager.getCharacterTexture());
         this.playerSprite.setPosition(posX, posY);
         this.playerSprite.setSize(64, 64);
         this.rect = new CollisionRect(posX, posY, playerSprite.getWidth(), playerSprite.getHeight());
         this.originalSpeed = speed;
     }
 
-    public Player(String username, String password) {
-        this(username, password, "SHANA");
+    public void setPlayerHealth(int playerHealth) {
+        this.playerHealth = playerHealth;
+    }
+
+    public void setSpeed(float speed) {
+        this.speed = speed;
+        this.originalSpeed = speed;
     }
 
     public void setSelectedCharacter(String charName) {
@@ -94,19 +92,10 @@ public class Player {
         if (moveLeft) posX -= speed;
         if (moveRight) posX += speed;
 
-        if (animator != null)
-            animator.update(delta, animState, posX, posY);
-
+        if (animator != null) animator.update(delta, animState);
         surviveTime += delta;
 
-        // Handle timed abilities
-        if (damagerTimer > 0) {
-            damagerTimer -= delta;
-            if (damagerTimer <= 0) {
-                damageMultiplier = 1f;
-                if (weapon != null) weapon.setDamageMultiplier(1f, 0);
-            }
-        }
+        if (damagerTimer > 0) damagerTimer -= delta;
         if (speedyTimer > 0) {
             speedyTimer -= delta;
             if (speedyTimer <= 0) {
@@ -117,26 +106,29 @@ public class Player {
 
     public void render(float centerX, float centerY) {
         if (animator != null) {
-            animator.render(Main.getBatch(), centerX, centerY);
+            float spriteWidth = animator.getWidth();
+            float spriteHeight = animator.getHeight();
+            animator.render(Main.getBatch(), centerX - spriteWidth / 2, centerY - spriteHeight / 2);
+
         } else if (playerSprite != null) {
-            playerSprite.setPosition(centerX, centerY);
+            playerSprite.setPosition(centerX - playerSprite.getWidth() / 2, centerY - playerSprite.getHeight() / 2);
             playerSprite.draw(Main.getBatch());
         }
+
         rect.move(posX, posY);
+    }
+
+    public Vector2 getPositionCenter() {
+        return new Vector2(posX + playerSprite.getWidth() / 2f,
+            posY + playerSprite.getHeight() / 2f);
     }
 
     public void setMoveUp(boolean value) { this.moveUp = value; }
     public void setMoveDown(boolean value) { this.moveDown = value; }
     public void setMoveLeft(boolean value) { this.moveLeft = value; }
     public void setMoveRight(boolean value) { this.moveRight = value; }
-
-    public void takeDamage(float dmg) {
-        playerHealth -= dmg;
-        if (playerHealth < 0) playerHealth = 0;
-    }
-
+    public void takeDamage(float dmg) { if (invincibleTimer <= 0) { playerHealth -= dmg; if (playerHealth < 0) playerHealth = 0; invincibleTimer = 1f; } }
     public void addKill() { kills++; }
-
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getPassword() { return password; }
@@ -148,11 +140,8 @@ public class Player {
     public String getSecurityAnswer() { return securityAnswer; }
     public void setSecurityAnswer(String securityAnswer) { this.securityAnswer = securityAnswer; }
     public void setScore(int score) { this.score = score; }
-
     public float getSurviveTime() { return surviveTime; }
     public void addSurviveTime(float delta) { surviveTime += delta; }
-    public Texture getPlayerTexture() { return playerTexture; }
-    public void setPlayerTexture(Texture playerTexture) { this.playerTexture = playerTexture; }
     public Sprite getPlayerSprite() { return playerSprite; }
     public void setPlayerSprite(Sprite playerSprite) { this.playerSprite = playerSprite; }
     public float getPosX() { return posX; }
@@ -160,40 +149,30 @@ public class Player {
     public float getPosY() { return posY; }
     public void setPosY(float posY) { this.posY = posY; }
     public int getPlayerHealth() { return playerHealth; }
-    public void setPlayerHealth(int playerHealth) { this.playerHealth = playerHealth; }
     public CollisionRect getRect() { return rect; }
     public void setRect(CollisionRect rect) { this.rect = rect; }
-    public boolean isPlayerIdle() { return isPlayerIdle; }
-    public void setPlayerIdle(boolean playerIdle) { isPlayerIdle = playerIdle; }
-    public boolean isPlayerRunning() { return isPlayerRunning; }
-    public void setPlayerRunning(boolean playerRunning) { isPlayerRunning = playerRunning; }
-    public float getTime() { return time; }
-    public void setTime(float time) { this.time = time; }
     public float getSpeed() { return speed; }
-    public void setSpeed(float speed) { this.speed = speed; }
     public void addKills(int value) { this.kills += value; }
     public int getKills() { return kills; }
     public void setKills(int kills) { this.kills = kills; }
     public String getSelectedCharacter() { return selectedCharacter; }
-    public Vector2 getPosition() { return new Vector2(playerSprite.getX(), playerSprite.getY()); }
-    public Vector2 getPositionCenter() {
-        return new Vector2(playerSprite.getX() + playerSprite.getWidth() / 2f,
-            playerSprite.getY() + playerSprite.getHeight() / 2f);
-    }
-
-    public void gainXP(int amount) {
-        xp += amount;
-        while (xp >= xpToNextLevel) {
-            xp -= xpToNextLevel;
-            level++;
-            xpToNextLevel = 20 * level;
-            grantRandomAbility();
-        }
-    }
-
+    public Vector2 getPosition() { return new Vector2(posX, posY); }
+    public void gainXP(int amount) { xp += amount; while (xp >= xpToNextLevel) { xp -= xpToNextLevel; level++; xpToNextLevel = 20 * level; grantRandomAbility();} }
     public int getLevel() { return level; }
     public int getXP() { return xp; }
     public int getXPToNextLevel() { return xpToNextLevel; }
+    public Rectangle getBounds() { return new Rectangle(posX, posY, playerSprite.getWidth(), playerSprite.getHeight()); }
+    public boolean isInvincible() { return invincibleTimer > 0; }
+    public void setPos(float x, float y) { this.posX = x; this.posY = y; }
+    public int getScore() {
+        return (int) (surviveTime * kills);
+    }
+    public void setInvincible(float sec) { invincibleTimer = sec; }
+    public boolean isDead() { return playerHealth <= 0; }
+    public List<Ability> getUnlockedAbilities() { return unlockedAbilities; }
+    public void addAbility(Ability ability) { if (!unlockedAbilities.contains(ability)) unlockedAbilities.add(ability); }
+    public void setCurrentAbility(Ability ability) { this.currentAbility = ability; }
+    public Ability getCurrentAbility() { return currentAbility; }
 
     private void grantRandomAbility() {
         List<Ability> candidates = new ArrayList<>();
@@ -204,52 +183,26 @@ public class Player {
         }
         if (candidates.isEmpty()) return;
         Ability chosen = candidates.get((int)(Math.random() * candidates.size()));
-        addAbility(chosen);
-        setCurrentAbility(chosen);
+        unlockedAbilities.add(chosen);
         applyAbilityEffect(chosen);
         System.out.println("New ability unlocked: " + chosen.getName());
     }
 
-    public Rectangle getBounds() {
-        return new Rectangle(playerSprite.getX(), playerSprite.getY(), playerSprite.getWidth(), playerSprite.getHeight());
-    }
-
-    public void takeDamage(int dmg) {
-        if (invincibleTimer > 0) return;
-        playerHealth -= dmg;
-        invincibleTimer = 3f;
-        if (playerHealth < 0) playerHealth = 0;
-    }
-
-    public boolean isInvincible() { return invincibleTimer > 0; }
-    public void setPos(float x, float y) { this.posX = x; this.posY = y; }
-    public int getScore() { return kills * 100 + (int)(surviveTime * 10); }
-    public List<Ability> getUnlockedAbilities() { return unlockedAbilities; }
-    public void addAbility(Ability ability) {
-        if (!unlockedAbilities.contains(ability))
-            unlockedAbilities.add(ability);
-    }
-    public void setCurrentAbility(Ability ability) { this.currentAbility = ability; }
-    public Ability getCurrentAbility() { return currentAbility; }
-    public void setInvincible(float sec) { invincibleTimer = sec; }
-    public boolean isDead() { return playerHealth <= 0; }
-
-    // اعمال تاثیر Ability روی بازیکن
     public void applyAbilityEffect(Ability ab) {
         switch (ab.getType()) {
             case VITALITY:
-                playerHealth += 20;
+                playerHealth += 1;
                 break;
             case DAMAGER:
                 damagerTimer = 10f;
-                damageMultiplier = 1.25f;
-                if (weapon != null) weapon.setDamageMultiplier(1.25f, 10f);
                 break;
             case PROCREASE:
-                if (weapon != null) weapon.increaseProjectiles(1);
+                projectileBonus++;
                 break;
             case AMOCREASE:
-                if (weapon != null) weapon.increaseMaxAmmo(1);
+                if (weapon != null) {
+                    weapon.increaseMagazineSize(5);
+                }
                 break;
             case SPEEDY:
                 speedyTimer = 10f;
@@ -258,12 +211,31 @@ public class Player {
         }
     }
 
-    public static class Weapon {
-        private float damageMultiplier = 1f;
-        private int projectileCount = 1;
-        private int maxAmmo = 10;
-        public void setDamageMultiplier(float mult, float time) { damageMultiplier = mult; }
-        public void increaseProjectiles(int count) { projectileCount += count; }
-        public void increaseMaxAmmo(int count) { maxAmmo += count; }
+    public boolean isDamagerActive() {
+        return this.damagerTimer > 0;
     }
+
+    public int getProjectileBonus() {
+        return this.projectileBonus;
+    }
+
+    public void setWeapon(Weapon weapon) {
+        this.weapon = weapon;
+    }
+
+
+    public void initializeTransientFields() {
+        this.animator = new CharacterAnimator(this.selectedCharacter != null ? this.selectedCharacter : "SHANA");
+        this.posX = Gdx.graphics.getWidth() / 2f;
+        this.posY = Gdx.graphics.getHeight() / 2f;
+        this.playerHealth = 4;
+        this.speed = 4;
+        this.originalSpeed = this.speed;
+        this.playerSprite = new Sprite(GameAssetManager.getCharacterTexture());
+        this.playerSprite.setPosition(posX, posY);
+        this.playerSprite.setSize(64, 64);
+        this.rect = new CollisionRect(posX, posY, playerSprite.getWidth(), playerSprite.getHeight());
+    }
+
+
 }

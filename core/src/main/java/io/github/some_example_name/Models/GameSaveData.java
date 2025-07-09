@@ -8,6 +8,10 @@ public class GameSaveData {
     public List<EnemyData> enemies;
     public WeaponData weapon;
     public float surviveTime;
+    public float gameDuration;
+    public boolean isBossSpawned;
+    public float enemySpawnInterval;
+    public boolean isBoundaryShieldActive;
 
     public static class PlayerData {
         public String name;

@@ -41,10 +41,9 @@ public class RegisterMenuView implements Screen {
 
         Table table = new Table();
         table.setFillParent(true);
-        backgroundTexture = new Texture("assets/Images/Backgrounds/Menus.png");
+        backgroundTexture = new Texture("Images/Backgrounds/Menus.png");
         backgroundImage = new Image(backgroundTexture);
         backgroundImage.setSize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        stage.addActor(backgroundImage);
 
         stage.addActor(table);
 
@@ -91,7 +90,7 @@ public class RegisterMenuView implements Screen {
             }
         });
 
-        TextButton backButton = new TextButton("Back", skin);
+        TextButton backButton = new TextButton("Exit", skin);
         backButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -103,7 +102,7 @@ public class RegisterMenuView implements Screen {
         loginButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new LoginMenuView(new LoginMenuController(Main.getMain(), new RegisterMenuController()), skin));
+                game.setScreen(new LoginMenuView(new LoginMenuController(Main.instance, new RegisterMenuController()), skin));
             }
         });
 
@@ -146,10 +145,15 @@ public class RegisterMenuView implements Screen {
     }
 
     @Override public void show() {}
-    @Override public void render(float delta) {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    @Override
+    public void render(float delta) {
+        com.badlogic.gdx.utils.ScreenUtils.clear(0, 0, 0, 1);
+
         stage.act(delta);
+
+        Main.getBatch().begin();
+        Main.getBatch().draw(backgroundTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Main.getBatch().end();
         stage.draw();
     }
     @Override public void resize(int width, int height) {
@@ -160,7 +164,7 @@ public class RegisterMenuView implements Screen {
     @Override public void hide() {}
     @Override public void dispose() {
         stage.dispose();
-        skin.dispose();
+//        skin.dispose();
         backgroundTexture.dispose();
 
     }

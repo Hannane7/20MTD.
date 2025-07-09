@@ -11,9 +11,12 @@ public class Tree extends Enemy {
     private Animation<TextureRegion> idleAnimation;
     private float stateTime = 0f;
     private boolean dead = false;
+    private static Texture treeTex0;
 
     public Tree(Vector2 spawnPosition) {
         super("Tree", 300, getFirstFrameTexture(), spawnPosition);
+        this.damage = 2f;
+        this.xpDrop = 20;
 
         TextureRegion[] frames = new TextureRegion[4];
         frames[0] = new TextureRegion(getFirstFrameTexture());
@@ -26,11 +29,8 @@ public class Tree extends Enemy {
 
         this.sprite.setSize(frames[0].getRegionWidth(), frames[0].getRegionHeight());
         this.sprite.setTexture(frames[0].getTexture());
-
-        this.xpDrop = 20;
     }
 
-    private static Texture treeTex0;
     private static Texture getFirstFrameTexture() {
         if (treeTex0 == null)
             treeTex0 = new Texture(Gdx.files.internal("Images/Sprite/Monsters/T_TreeMonster_0.png"));
@@ -40,7 +40,6 @@ public class Tree extends Enemy {
     @Override
     public void update(float delta, Player player) {
         rect.move(sprite.getX(), sprite.getY());
-
         if (!dead) {
             stateTime += delta;
         }
@@ -48,13 +47,15 @@ public class Tree extends Enemy {
 
     @Override
     public void die() {
-        dead = true;
+        this.dead = true;
     }
+
 
     @Override
     public void draw(Batch batch, float offsetX, float offsetY) {
-        TextureRegion frame = idleAnimation.getKeyFrame(stateTime, true);
-        batch.draw(frame, getX() + offsetX, getY() + offsetY);
+        if (!dead) {
+            TextureRegion frame = idleAnimation.getKeyFrame(stateTime, true);
+            batch.draw(frame, getX() + offsetX, getY() + offsetY);
+        }
     }
-
 }

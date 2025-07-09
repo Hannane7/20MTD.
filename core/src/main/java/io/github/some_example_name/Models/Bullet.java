@@ -15,7 +15,6 @@ public class Bullet {
     private Vector2 position;
     private Vector2 velocity;
     private boolean active = true;
-    private float speed;
     private float damage;
     private float maxDistance;
     private float traveledDistance;
@@ -26,7 +25,6 @@ public class Bullet {
 
     public Bullet(float startX, float startY, float targetX, float targetY, float speed, float damage, BulletOwner owner) {
         this.position = new Vector2(startX, startY);
-        this.speed = speed;
         this.damage = damage;
         this.maxDistance = 2000f;
         this.traveledDistance = 0;
@@ -36,12 +34,12 @@ public class Bullet {
 
         Texture texture;
         if (owner == BulletOwner.PLAYER) {
-            texture = new Texture(Gdx.files.internal("Images/CharBullet.png"));
+            texture = GameAssetManager.getManager().get("Images/CharBullet.png", Texture.class);
         } else {
-            texture = new Texture(Gdx.files.internal("Images/Bullet.png"));
+            texture = GameAssetManager.getManager().get("Images/Bullet.png", Texture.class);
         }
         this.sprite = new Sprite(texture);
-        this.sprite.setSize(8, 8); // اندازه استاندارد
+        this.sprite.setSize(8, 8);
         this.sprite.setOriginCenter();
         this.sprite.setRotation(direction.angleDeg());
         this.sprite.setPosition(position.x, position.y);
@@ -54,22 +52,20 @@ public class Bullet {
 
         position.x += velocity.x * delta;
         position.y += velocity.y * delta;
+        sprite.setPosition(position.x, position.y);
 
         traveledDistance += velocity.len() * delta;
         if (traveledDistance >= maxDistance) {
-            active = false;
+            deactivate();
         }
-
-        sprite.setPosition(position.x, position.y);
     }
 
-    public void render(SpriteBatch batch, float x, float y) {
+    public void draw(Batch batch, float offsetX, float offsetY) {
         if (active) {
-            sprite.setPosition(x, y);
+            sprite.setPosition(position.x + offsetX, position.y + offsetY);
             sprite.draw(batch);
         }
     }
-
 
     public boolean isActive() {
         return active;
@@ -95,9 +91,7 @@ public class Bullet {
         return new Rectangle(position.x, position.y, sprite.getWidth(), sprite.getHeight());
     }
 
-    public void draw(Batch batch) {
-        if (active) {
-            sprite.draw(batch);
-        }
-
-    }}
+    public Vector2 getVelocity() {
+        return velocity;
+    }
+}

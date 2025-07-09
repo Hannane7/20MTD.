@@ -5,9 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
 import io.github.some_example_name.Main;
-import io.github.some_example_name.Models.Enemy;
-import io.github.some_example_name.Models.Player;
-import io.github.some_example_name.Models.TentacleMonster;
+import io.github.some_example_name.Models.*;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -23,27 +21,40 @@ public class WorldController {
     private float enemySpawnTimer = 0;
     private final float ENEMY_SPAWN_INTERVAL = 2f;
     private final Random random = new Random();
+    private List<HitEffect> hitEffects;
 
     public WorldController(PlayerController playerController) {
         this.backgroundTexture = new Texture("Images/Backgrounds/GameBG.png");
         this.playerController = playerController;
         this.enemies = new ArrayList<>();
-        enemies.add(new TentacleMonster(new Vector2(500, 500)));
-        enemies.add(new TentacleMonster(new Vector2(600, 400)));
-        enemies.add(new TentacleMonster(new Vector2(700, 300)));
+        this.hitEffects = new ArrayList<>();
+        spawnInitialTrees();
+
     }
+
+
+    public void addHitEffect(Vector2 position) {
+        hitEffects.add(new HitEffect(position));
+    }
+
+    private void spawnInitialTrees() {
+        int treeCount = random.nextInt(5) + 3;
+        float mapWidth = Main.getWidth() * 2;
+        float mapHeight = Main.getHeight() * 2;
+
+        for (int i = 0; i < treeCount; i++) {
+            float x = random.nextFloat() * mapWidth - (mapWidth / 4);
+            float y = random.nextFloat() * mapHeight - (mapHeight / 4);
+            enemies.add(new Tree(new Vector2(x, y)));
+        }
+    }
+
 
     public void update() {
         Player player = playerController.getPlayer();
 
         backgroundX = player.getPosX() - Main.getWidth() / 2f;
         backgroundY = player.getPosY() - Main.getHeight() / 2f;
-
-        enemySpawnTimer += Gdx.graphics.getDeltaTime();
-        if (enemySpawnTimer >= ENEMY_SPAWN_INTERVAL) {
-            spawnEnemyNearPlayer(player);
-            enemySpawnTimer = 0;
-        }
 
         Iterator<Enemy> iterator = enemies.iterator();
         while (iterator.hasNext()) {
@@ -53,6 +64,15 @@ public class WorldController {
                 iterator.remove();
             }
         }
+
+        Iterator<HitEffect> effectIterator = hitEffects.iterator();
+        while (effectIterator.hasNext()) {
+            HitEffect effect = effectIterator.next();
+            effect.update(Gdx.graphics.getDeltaTime());
+            if (effect.isFinished()) {
+                effectIterator.remove();
+            }
+        }
     }
 
     public void render(float offsetX, float offsetY) {
@@ -60,18 +80,9 @@ public class WorldController {
         for (Enemy enemy : enemies) {
             enemy.draw(Main.getBatch(), offsetX, offsetY);
         }
-    }
-
-
-    private void spawnEnemyNearPlayer(Player player) {
-        float px = player.getPosX();
-        float py = player.getPosY();
-
-        float offsetX = (random.nextBoolean() ? 1 : -1) * (300 + random.nextInt(200));
-        float offsetY = (random.nextBoolean() ? 1 : -1) * (300 + random.nextInt(200));
-        Vector2 spawnPos = new Vector2(px + offsetX, py + offsetY);
-
-        enemies.add(new TentacleMonster(spawnPos));
+        for (HitEffect effect : hitEffects) {
+            effect.draw(Main.getBatch(), offsetX, offsetY);
+        }
     }
 
     public List<Enemy> getEnemies() {

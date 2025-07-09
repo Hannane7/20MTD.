@@ -2,6 +2,7 @@ package io.github.some_example_name.Controllers;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.Json;
 import com.google.gson.Gson;
 import com.badlogic.gdx.math.Vector2;
 import io.github.some_example_name.Main;
@@ -22,65 +23,88 @@ public class MainMenuController {
         return currentPlayer;
     }
 
-    public void handleNewGame(Player currentPlayer) {
-        CharacterSelectionController cController = new CharacterSelectionController(currentPlayer);
-        CharacterSelectionView cView = new CharacterSelectionView(cController, GameAssetManager.getSkin());
-        cController.setView(cView);
-        Main.getMain().setScreen(cView);
+    public void handleNewGame() {
+
+        Player newPlayer = new Player(currentPlayer.getUsername(), currentPlayer.getPassword());
+
+        Main.instance.setScreen(
+            new PreGameMenuView(
+                new PreGameMenuController(),
+                GameAssetManager.getSkin(),
+                newPlayer
+            )
+        );
     }
 
-
-    public void handleLoadGame(Player currentPlayer) {
+    public void handleLoadGame() {
         FileHandle file = Gdx.files.local("save.json");
         if (!file.exists()) {
             System.out.println("No saved game found.");
             return;
         }
 
-        Gson gson = new Gson();
-        String json = file.readString();
-        GameSaveData saveData = gson.fromJson(json, GameSaveData.class);
-
-        Player player = new Player();
-        player.setUsername(saveData.player.name);
-        player.setPlayerHealth(saveData.player.health);
-        player.setKills(saveData.player.kills);
-        player.setPos(saveData.player.x, saveData.player.y);
-        player.addSurviveTime(saveData.surviveTime);
-
-        PreGame preGame = new PreGame(
-            saveData.player.name,
-            "Dash",
-            saveData.weapon.name,
-            20
-        );
-
-        GameController gameController = new GameController(player, preGame);
-        gameController.getWeaponController().getWeapon().setAmmo(saveData.weapon.ammo);
-
-        for (GameSaveData.EnemyData e : saveData.enemies) {
-            Enemy enemy;
-            Vector2 pos = new Vector2(e.x, e.y);
-            switch (e.type) {
-                case "TentacleMonster": enemy = new TentacleMonster(pos); break;
-                case "Elder": enemy = new Elder(pos); break;
-                case "Tree": enemy = new Tree(pos); break;
-                case "EyeBat": enemy = new EyeBat(pos); break;
-                default: enemy = new TentacleMonster(pos);
-            }
-            enemy.setHealth(e.health);
-            gameController.getEnemies().add(enemy);
+        Json json = new Json();
+        GameSaveData saveData;
+        try {
+            saveData = json.fromJson(GameSaveData.class, file);
+        } catch (Exception e) {
+            System.err.println("Could not load save file: " + e.getMessage());
+            return;
         }
 
-        Main.getMain().setScreen(new GameView(gameController));
+
+        Player loadedPlayer = new Player(saveData.player.name, "");
+        loadedPlayer.setPlayerHealth(saveData.player.health);
+        loadedPlayer.setKills(saveData.player.kills);
+        loadedPlayer.setPos(saveData.player.x, saveData.player.y);
+        loadedPlayer.addSurviveTime(saveData.surviveTime);
+
+
+        PreGame preGameInfo = new PreGame(
+            loadedPlayer.getUsername(),
+            "Shana",
+            saveData.weapon.name,
+            saveData.gameDuration / 60
+        );
+
+        GameView gameView = new GameView(loadedPlayer, preGameInfo);
+
+        GameController loadedController = gameView.getController();
+        loadedController.setBossSpawned(saveData.isBossSpawned);
+        loadedController.setEnemySpawnInterval(saveData.enemySpawnInterval);
+        if(saveData.isBoundaryShieldActive){
+            loadedController.activateBoundaryShield();
+        }
+
+
+        gameView.getController().getEnemies().clear();
+        for (GameSaveData.EnemyData enemyData : saveData.enemies) {
+            Enemy enemy = createEnemyFromData(enemyData);
+            gameView.getController().getEnemies().add(enemy);
+        }
+        Main.gameState = Main.GameState.PLAYING;
+        Main.instance.setScreen(gameView);
+    }
+
+    private Enemy createEnemyFromData(GameSaveData.EnemyData data) {
+        Enemy enemy;
+        switch (data.type) {
+            case "Elder":           enemy = new Elder(new com.badlogic.gdx.math.Vector2(data.x, data.y)); break;
+            case "EyeBat":          enemy = new EyeBat(new com.badlogic.gdx.math.Vector2(data.x, data.y)); break;
+            case "TentacleMonster": enemy = new TentacleMonster(new com.badlogic.gdx.math.Vector2(data.x, data.y)); break;
+            case "Tree":            enemy = new Tree(new com.badlogic.gdx.math.Vector2(data.x, data.y)); break;
+            default:                return null; // یا یک دشمن پیش‌فرض
+        }
+        enemy.setHealth(data.health);
+        return enemy;
     }
 
     public void handleSettings() {
-        Main.getMain().setScreen(new SettingsView(GameAssetManager.getSkin()));
+        Main.instance.setScreen(new SettingsView(GameAssetManager.getSkin(), this.currentPlayer));
     }
 
     public void handleCredits() {
-        Main.getMain().setScreen(
+        Main.instance.setScreen(
             new CreditsView(
                 GameAssetManager.getSkin(),
                 currentPlayer
@@ -90,16 +114,15 @@ public class MainMenuController {
 
 
     public void handleProfile(Player currentPlayer) {
-        Main.getMain().setScreen(new ProfileView(currentPlayer, GameAssetManager.getSkin()));
+        Main.instance.setScreen(new ProfileView(currentPlayer, GameAssetManager.getSkin()));
     }
 
 
     public void handleScoreboard(Player currentPlayer) {
         List<Player> allPlayers = loadAllPlayers();
-        Main.getMain().setScreen(new ScoreboardView(allPlayers, currentPlayer));
+        Main.instance.setScreen(new ScoreboardView(allPlayers, currentPlayer));
     }
 
-    // لود لیست همه کاربران از فایل users.json
     private List<Player> loadAllPlayers() {
         FileHandle userFile = Gdx.files.local("users.json");
         Gson gson = new Gson();
@@ -119,13 +142,11 @@ public class MainMenuController {
     }
 
     public void handleTalent(Player currentPlayer) {
-        Main.getMain().setScreen(new TalentMenuView(currentPlayer));
+        Main.instance.setScreen(new TalentMenuView(currentPlayer));
     }
 
 
     public void handleExit() {
-        System.out.println("Exiting the game...");
-        Main.getMain().dispose();
-        System.exit(0);
+        Gdx.app.exit();
     }
 }
